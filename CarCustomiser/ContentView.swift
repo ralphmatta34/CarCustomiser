@@ -10,13 +10,21 @@ import SwiftUI
 struct ContentView: View {
     @State private var starterCars = StarterCars()
     @State private var selectedCar: Int = 0
-    
     @State private var exhaustPackage = false
     @State private var tiresPackage = false
-    
     @State private var remainingFunds: Int = 750
+    @State private var remainingTime = 30
+    @State private var nextButtonDisabled: Bool = false
     
-    @State private var justChanged: Bool = false
+    var exhaustPackageEnabled: Bool {
+        return exhaustPackage ? true : remainingFunds >= 500 ? true : false
+    }
+    
+    var tiresPackageEnabled: Bool {
+        return tiresPackage ? true : remainingFunds >= 500 ? true : false
+    }
+    
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
     var body: some View {
         let exhaustPackageBinding = Binding<Bool> (
@@ -48,6 +56,15 @@ struct ContentView: View {
         )
     
         VStack {
+            Text("\(remainingTime)")
+                .onReceive(timer, perform: { _ in
+                    if self.remainingTime > 0 {
+                        self.remainingTime -= 1
+                    } else {
+                        nextButtonDisabled = true
+                    }
+                })
+                .foregroundColor(.red)
             Form {
                 VStack(alignment: .leading, spacing: 20) {
                     Text(starterCars.cars[selectedCar].displayStats())
@@ -56,7 +73,6 @@ struct ContentView: View {
                         
                         exhaustPackage = false
                         tiresPackage = false
-                        justChanged = true
                         
                         if selectedCar == starterCars.cars.count-1 {
                             selectedCar = 0
@@ -65,20 +81,19 @@ struct ContentView: View {
                             selectedCar += 1
                         }
                         
-                        if exhaustPackage || tiresPackage {
-                            justChanged = false
-                        }
+                        remainingFunds = 750
                         
                     })
+                    .disabled(nextButtonDisabled)
                 }
                     
                 Section {
                         
                     Toggle("Exhaust Package (500)", isOn: exhaustPackageBinding)
-                        .disabled(self.remainingFunds < 500 && !exhaustPackage && !justChanged)
+                        .disabled((remainingFunds < 500 && !exhaustPackage) || nextButtonDisabled)
                         
                     Toggle("Tires Package (500)", isOn: tiresPackageBinding)
-                        .disabled(self.remainingFunds < 500 && !tiresPackage && !justChanged)
+                        .disabled((remainingFunds < 500 && !tiresPackage) || nextButtonDisabled)
          
                 }
                 
